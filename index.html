@@ -9,6 +9,7 @@
         :root {
             --neon-red: #ff003c;
             --neon-gold: #ffcf00;
+            --neon-green: #00ff66;
             --bg-dark: #0a0a0a;
         }
 
@@ -75,7 +76,7 @@
             border: 2px solid var(--neon-gold);
             display: flex;
             gap: 10px;
-            cursor: pointer; /* Click to spin */
+            cursor: pointer;
         }
 
         .reel {
@@ -85,7 +86,7 @@
         }
 
         .symbol-box {
-            width: 140px; /* Expanded horizontally by ~30% */
+            width: 140px; 
             height: 100px;
             background-color: rgba(0, 0, 0, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -113,7 +114,6 @@
             z-index: 10;
         }
 
-        /* Win Indicator overlay */
         .win-line {
             box-shadow: 0 0 20px 5px var(--neon-gold) inset !important;
             border-color: var(--neon-gold) !important;
@@ -179,6 +179,8 @@
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .stat-box {
@@ -186,25 +188,29 @@
             flex-direction: column;
             align-items: center;
             min-width: 120px;
+            padding: 5px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .stat-label {
             font-weight: 100;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             color: #aaa;
             letter-spacing: 1px;
         }
 
         .stat-value {
             font-weight: 600;
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             color: #fff;
             transition: color 0.3s;
         }
 
         .win-flash {
-            color: var(--neon-gold) !important;
-            text-shadow: 0 0 15px var(--neon-gold);
+            color: var(--neon-green) !important;
+            text-shadow: 0 0 15px var(--neon-green);
             transform: scale(1.1);
         }
 
@@ -214,7 +220,7 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 600;
             font-size: 1.1rem;
-            padding: 15px 30px;
+            padding: 15px 25px;
             border: 1px solid var(--neon-red);
             border-radius: 6px;
             cursor: pointer;
@@ -238,6 +244,28 @@
             cursor: not-allowed;
             box-shadow: none;
             border-color: #555;
+        }
+
+        .multi-btn {
+            border-color: #00ccff;
+            box-shadow: 0 0 8px #00ccff inset, 0 0 8px #00ccff;
+        }
+
+        .multi-btn:hover:not(:disabled) {
+            background: rgba(0, 204, 255, 0.2);
+            box-shadow: 0 0 15px #00ccff inset, 0 0 15px #00ccff;
+        }
+
+        .multi-btn.active-x2 {
+            border-color: #ff00ff;
+            box-shadow: 0 0 12px #ff00ff inset, 0 0 12px #ff00ff;
+            text-shadow: 0 0 5px #ff00ff;
+        }
+
+        .multi-btn.active-x5 {
+            border-color: var(--neon-gold);
+            box-shadow: 0 0 12px var(--neon-gold) inset, 0 0 12px var(--neon-gold);
+            text-shadow: 0 0 5px var(--neon-gold);
         }
 
         .spin-btn {
@@ -299,25 +327,32 @@
             <div class="stat-value" id="bankroll-display">$10,000.00</div>
         </div>
         
-        <button id="raise-btn" onclick="raiseBid()">Raise Bid</button>
-        
         <div class="stat-box">
-            <div class="stat-label">CURRENT BET</div>
+            <div class="stat-label">TOTAL BET</div>
             <div class="stat-value" id="bet-display">$10.00</div>
         </div>
 
-        <button id="max-bet-btn" onclick="maxBid()">Max Bid</button>
+        <button id="raise-btn" onclick="raiseBid()">Raise Base</button>
+        <button id="max-bet-btn" onclick="maxBid()">Max Base</button>
+        
+        <button class="multi-btn" id="multiplier-btn" onclick="toggleMultiplier()">Multiplier: x1</button>
+
+        <div class="stat-box">
+            <div class="stat-label">LAST WIN</div>
+            <div class="stat-value" id="win-display">$0.00</div>
+        </div>
+
         <button class="spin-btn" id="spin-btn" onclick="spin()">SPIN</button>
     </div>
 
     <script>
         let bankroll = 10000;
-        let currentBet = 10;
+        let baseBet = 10;
+        let winMultiplier = 1; // Options: 1, 2, 5
         const MAX_BET = 10000;
         const MIN_BET = 10;
         let isSpinning = false;
         
-        // Logical grid to evaluate wins: gridData[col][row]
         let gridData = [[], [], [], [], []];
 
         const SYMBOLS = [
@@ -331,7 +366,6 @@
             'symbol_coin.png.png'
         ];
 
-        // Multipliers for landing 3, 4, or 5 of a kind
         const PAYTABLE = {
             'symbol_wild.png.png': { 3: 5, 4: 20, 5: 100 },
             'symbol_sycee.png.png': { 3: 4, 4: 15, 5: 50 },
@@ -340,7 +374,6 @@
             'symbol_k.png.png': { 3: 1, 4: 3, 5: 10 },
             'symbol_q.png.png': { 3: 0.5, 4: 2, 5: 5 },
             'symbol_j.png.png': { 3: 0.5, 4: 2, 5: 5 }
-            // Coins are evaluated separately as instant cash overlay drops
         };
 
         const formatMoney = (amount) => {
@@ -377,39 +410,68 @@
         }
 
         function updateDisplay() {
+            const totalBetCost = baseBet * winMultiplier;
             document.getElementById('bankroll-display').innerText = formatMoney(bankroll);
-            document.getElementById('bet-display').innerText = formatMoney(currentBet);
+            document.getElementById('bet-display').innerText = formatMoney(totalBetCost);
         }
 
         function raiseBid() {
             if (isSpinning) return;
-            if (currentBet < 100) currentBet += 10;
-            else if (currentBet < 1000) currentBet += 100;
-            else if (currentBet < MAX_BET) currentBet += 1000;
-            else currentBet = MIN_BET;
+            if (baseBet < 100) baseBet += 10;
+            else if (baseBet < 1000) baseBet += 100;
+            else if (baseBet < MAX_BET) baseBet += 1000;
+            else baseBet = MIN_BET;
             
-            if (currentBet > bankroll) currentBet = bankroll;
+            if (baseBet * winMultiplier > bankroll) baseBet = Math.floor(bankroll / winMultiplier);
             updateDisplay();
         }
 
         function maxBid() {
             if (isSpinning) return;
-            currentBet = Math.min(MAX_BET, bankroll);
+            baseBet = Math.floor(Math.min(MAX_BET, bankroll / winMultiplier));
+            updateDisplay();
+        }
+
+        function toggleMultiplier() {
+            if (isSpinning) return;
+            const btn = document.getElementById('multiplier-btn');
+            btn.classList.remove('active-x2', 'active-x5');
+
+            if (winMultiplier === 1) {
+                winMultiplier = 2;
+                btn.classList.add('active-x2');
+            } else if (winMultiplier === 2) {
+                winMultiplier = 5;
+                btn.classList.add('active-x5');
+            } else {
+                winMultiplier = 1;
+            }
+
+            btn.innerText = `Multiplier: x${winMultiplier}`;
+            
+            // Adjust base bet if multiplier puts total over bankroll
+            if (baseBet * winMultiplier > bankroll) {
+                baseBet = Math.max(MIN_BET, Math.floor(bankroll / winMultiplier));
+            }
             updateDisplay();
         }
 
         function spin() {
-            if (isSpinning || currentBet > bankroll || bankroll <= 0) return;
+            const totalBetCost = baseBet * winMultiplier;
+            if (isSpinning || totalBetCost > bankroll || bankroll <= 0) return;
             
             isSpinning = true;
-            bankroll -= currentBet;
+            bankroll -= totalBetCost;
+            
+            // Reset Last Win display
+            const winDisplayEl = document.getElementById('win-display');
+            winDisplayEl.innerText = "$0.00";
+            winDisplayEl.classList.remove('win-flash');
+            
             updateDisplay();
             
-            // Clear old win highlights
             document.querySelectorAll('.symbol-box').forEach(b => b.classList.remove('win-line'));
-            document.getElementById('bankroll-display').classList.remove('win-flash');
             
-            // Animate lever
             const lever = document.getElementById('lever');
             lever.classList.add('pull');
             setTimeout(() => lever.classList.remove('pull'), 400);
@@ -433,7 +495,7 @@
                         box.classList.remove('spinning');
                         
                         const randomImg = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-                        gridData[colIndex][rowIndex] = randomImg; // Store in logical grid
+                        gridData[colIndex][rowIndex] = randomImg; 
                         
                         const imgEl = box.querySelector('.symbol-img');
                         imgEl.src = randomImg;
@@ -442,10 +504,10 @@
                         if (randomImg === 'symbol_coin.png.png') {
                             const valEl = document.createElement('div');
                             valEl.className = 'coin-value';
+                            // Coin values scale with total bet
                             const multi = [0.5, 1, 2, 5, 10][Math.floor(Math.random() * 5)];
-                            const cashValue = currentBet * multi;
+                            const cashValue = (baseBet * winMultiplier) * multi;
                             valEl.innerText = formatMoney(cashValue);
-                            // Store cash value for payout logic
                             box.dataset.cash = cashValue; 
                             box.appendChild(valEl);
                         } else {
@@ -454,7 +516,7 @@
                     });
 
                     if (colIndex === reels.length - 1) {
-                        setTimeout(evaluateBoard, 300); // Check win shortly after last reel drops
+                        setTimeout(evaluateBoard, 300); 
                     }
                 }, 500 + (colIndex * 300));
             });
@@ -463,12 +525,10 @@
         function evaluateBoard() {
             let totalWin = 0;
             
-            // Define basic horizontal paylines (Rows 0, 1, 2)
             for (let row = 0; row < rows; row++) {
                 let matchCount = 1;
                 let firstSymbol = gridData[0][row];
                 
-                // If first is a wild, find the first non-wild to determine the target symbol
                 let targetSymbol = firstSymbol;
                 if (targetSymbol === 'symbol_wild.png.png') {
                     for (let c = 1; c < cols; c++) {
@@ -479,7 +539,6 @@
                     }
                 }
 
-                // Skip line check if line is purely coins (handled separately)
                 if (targetSymbol === 'symbol_coin.png.png') continue;
 
                 let winningBoxes = [`box-0-${row}`];
@@ -490,22 +549,21 @@
                         matchCount++;
                         winningBoxes.push(`box-${col}-${row}`);
                     } else {
-                        break; // Streak broken
+                        break; 
                     }
                 }
 
                 if (matchCount >= 3 && PAYTABLE[targetSymbol]) {
+                    // Line win base * line multiplier * global win multiplier
                     const multiplier = PAYTABLE[targetSymbol][matchCount];
-                    totalWin += currentBet * multiplier;
+                    totalWin += (baseBet * multiplier) * winMultiplier;
                     
-                    // Highlight winning boxes
                     winningBoxes.forEach(id => {
                         document.getElementById(id).classList.add('win-line');
                     });
                 }
             }
 
-            // Process Coins (Instant win if 3 or more appear anywhere)
             let coinBoxes = [];
             let coinTotal = 0;
             for (let c = 0; c < cols; c++) {
@@ -518,14 +576,21 @@
                 }
             }
 
+            // Coin scatter requires 3 or more
             if (coinBoxes.length >= 3) {
                 totalWin += coinTotal;
                 coinBoxes.forEach(box => box.classList.add('win-line'));
             }
 
-            // Apply Winnings
             if (totalWin > 0) {
                 bankroll += totalWin;
+                
+                // Update Last Win display
+                const winDisplayEl = document.getElementById('win-display');
+                winDisplayEl.innerText = formatMoney(totalWin);
+                winDisplayEl.classList.add('win-flash');
+                
+                // Flash bankroll
                 const bankrollEl = document.getElementById('bankroll-display');
                 bankrollEl.classList.add('win-flash');
                 setTimeout(() => bankrollEl.classList.remove('win-flash'), 1000);
