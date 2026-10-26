@@ -24,6 +24,25 @@
             justify-content: center;
             min-height: 100vh;
             user-select: none;
+            position: relative;
+        }
+
+        /* Sound Toggle */
+        .sound-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            border-color: var(--neon-gold);
+            color: var(--neon-gold);
+            box-shadow: 0 0 5px var(--neon-gold) inset, 0 0 5px var(--neon-gold);
+            border-radius: 6px;
+            cursor: pointer;
+            background: transparent;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            transition: all 0.3s;
         }
 
         /* Top Pots */
@@ -75,7 +94,7 @@
         .machine-wrapper {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 15px; /* Grid (780px) + Gap (15px) + Lever (40px) = 835px Total Width */
         }
 
         /* Slot Grid */
@@ -213,26 +232,27 @@
             transform: rotateX(70deg) scaleY(0.6);
         }
 
-        /* Controls */
+        /* Controls - Matched width to upper wrapper */
         .controls {
-            margin-top: 40px;
+            width: 835px; /* Exact width of the grid + gap + lever */
+            box-sizing: border-box;
+            margin-top: 30px;
             display: flex;
-            gap: 20px;
+            gap: 10px;
             align-items: center;
+            justify-content: space-between;
             background: rgba(0, 0, 0, 0.8);
-            padding: 20px;
+            padding: 15px;
             border-radius: 12px;
             box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
-            flex-wrap: wrap;
-            justify-content: center;
         }
 
         .stat-box {
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-width: 120px;
-            padding: 5px 15px;
+            min-width: 90px;
+            padding: 5px 10px;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -240,16 +260,18 @@
 
         .stat-label {
             font-weight: 100;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: #aaa;
             letter-spacing: 1px;
+            white-space: nowrap;
         }
 
         .stat-value {
             font-weight: 600;
-            font-size: 1.4rem;
+            font-size: 1.15rem;
             color: #fff;
             transition: color 0.3s;
+            white-space: nowrap;
         }
 
         .win-flash {
@@ -258,13 +280,13 @@
             transform: scale(1.1);
         }
 
-        button {
+        button.control-btn {
             background: transparent;
             color: #fff;
             font-family: 'Montserrat', sans-serif;
             font-weight: 600;
-            font-size: 1.1rem;
-            padding: 15px 25px;
+            font-size: 0.9rem;
+            padding: 12px 15px;
             border: 1px solid var(--neon-red);
             border-radius: 6px;
             cursor: pointer;
@@ -272,18 +294,19 @@
             transition: all 0.2s;
             text-transform: uppercase;
             letter-spacing: 1px;
+            white-space: nowrap;
         }
 
-        button:hover:not(:disabled) {
+        button.control-btn:hover:not(:disabled) {
             background: rgba(255, 0, 60, 0.2);
             box-shadow: 0 0 15px var(--neon-red) inset, 0 0 15px var(--neon-red);
         }
 
-        button:active:not(:disabled) {
+        button.control-btn:active:not(:disabled) {
             transform: scale(0.95);
         }
 
-        button:disabled {
+        button.control-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             box-shadow: none;
@@ -291,37 +314,37 @@
         }
 
         .multi-btn {
-            border-color: #00ccff;
-            box-shadow: 0 0 8px #00ccff inset, 0 0 8px #00ccff;
+            border-color: #00ccff !important;
+            box-shadow: 0 0 8px #00ccff inset, 0 0 8px #00ccff !important;
         }
 
         .multi-btn:hover:not(:disabled) {
-            background: rgba(0, 204, 255, 0.2);
-            box-shadow: 0 0 15px #00ccff inset, 0 0 15px #00ccff;
+            background: rgba(0, 204, 255, 0.2) !important;
+            box-shadow: 0 0 15px #00ccff inset, 0 0 15px #00ccff !important;
         }
 
         .multi-btn.active-x2 {
-            border-color: #ff00ff;
-            box-shadow: 0 0 12px #ff00ff inset, 0 0 12px #ff00ff;
+            border-color: #ff00ff !important;
+            box-shadow: 0 0 12px #ff00ff inset, 0 0 12px #ff00ff !important;
             text-shadow: 0 0 5px #ff00ff;
         }
 
         .multi-btn.active-x5 {
-            border-color: var(--neon-gold);
-            box-shadow: 0 0 12px var(--neon-gold) inset, 0 0 12px var(--neon-gold);
+            border-color: var(--neon-gold) !important;
+            box-shadow: 0 0 12px var(--neon-gold) inset, 0 0 12px var(--neon-gold) !important;
             text-shadow: 0 0 5px var(--neon-gold);
         }
 
         .spin-btn {
-            border-color: var(--neon-gold);
-            box-shadow: 0 0 10px var(--neon-gold) inset, 0 0 10px var(--neon-gold);
-            font-size: 1.3rem;
-            padding: 15px 50px;
+            border-color: var(--neon-gold) !important;
+            box-shadow: 0 0 10px var(--neon-gold) inset, 0 0 10px var(--neon-gold) !important;
+            font-size: 1.1rem !important;
+            padding: 12px 30px !important;
         }
 
         .spin-btn:hover:not(:disabled) {
-            background: rgba(255, 207, 0, 0.2);
-            box-shadow: 0 0 20px var(--neon-gold) inset, 0 0 20px var(--neon-gold);
+            background: rgba(255, 207, 0, 0.2) !important;
+            box-shadow: 0 0 20px var(--neon-gold) inset, 0 0 20px var(--neon-gold) !important;
         }
         
         .spinning .symbol-img {
@@ -336,6 +359,8 @@
     </style>
 </head>
 <body>
+
+    <button id="sound-toggle" class="sound-toggle" onclick="toggleSound()">🔊 Sound: ON</button>
 
     <div class="pots-container">
         <div class="pot" id="grand-container">
@@ -368,7 +393,7 @@
     <div class="controls">
         <div class="stat-box">
             <div class="stat-label">BANKROLL</div>
-            <div class="stat-value" id="bankroll-display">$10,000.00</div>
+            <div class="stat-value" id="bankroll-display">$10,000</div>
         </div>
         
         <div class="stat-box">
@@ -376,25 +401,44 @@
             <div class="stat-value" id="bet-display">$10.00</div>
         </div>
 
-        <button id="raise-btn" onclick="raiseBid()">Raise Base</button>
-        <button id="max-bet-btn" onclick="maxBid()">Max Base</button>
+        <button class="control-btn" id="raise-btn" onclick="raiseBid()">Raise Base</button>
+        <button class="control-btn" id="max-bet-btn" onclick="maxBid()">Max Base</button>
         
-        <button class="multi-btn" id="multiplier-btn" onclick="toggleMultiplier()">Multiplier: x1</button>
+        <button class="control-btn multi-btn" id="multiplier-btn" onclick="toggleMultiplier()">Multiplier: x1</button>
 
         <div class="stat-box">
             <div class="stat-label">LAST WIN</div>
             <div class="stat-value" id="win-display">$0.00</div>
         </div>
 
-        <button class="spin-btn" id="spin-btn" onclick="spin()">SPIN</button>
+        <button class="control-btn spin-btn" id="spin-btn" onclick="spin()">SPIN</button>
     </div>
 
     <script>
-        // Web Audio API Context
+        // Sound Management
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx;
+        let soundEnabled = true;
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('sound-toggle');
+            if (soundEnabled) {
+                btn.innerText = "🔊 Sound: ON";
+                btn.style.borderColor = "var(--neon-gold)";
+                btn.style.color = "var(--neon-gold)";
+                btn.style.boxShadow = "0 0 5px var(--neon-gold) inset, 0 0 5px var(--neon-gold)";
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            } else {
+                btn.innerText = "🔇 Sound: OFF";
+                btn.style.borderColor = "#555";
+                btn.style.color = "#888";
+                btn.style.boxShadow = "none";
+            }
+        }
 
         function playWinSound() {
+            if (!soundEnabled) return;
             if (!audioCtx) audioCtx = new AudioContext();
             if (audioCtx.state === 'suspended') audioCtx.resume();
             
@@ -453,7 +497,7 @@
         };
 
         const formatMoney = (amount) => {
-            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
         };
 
         const gridEl = document.getElementById('grid');
@@ -490,7 +534,6 @@
             document.getElementById('bankroll-display').innerText = formatMoney(bankroll);
             document.getElementById('bet-display').innerText = formatMoney(totalBetCost);
             
-            // Dynamically scale Jackpots based on total bet size
             document.getElementById('minor-pot').innerText = formatMoney(totalBetCost * 25);
             document.getElementById('major-pot').innerText = formatMoney(totalBetCost * 100);
             document.getElementById('grand-pot').innerText = formatMoney(totalBetCost * 500);
@@ -537,7 +580,7 @@
         }
 
         function spin() {
-            if (!audioCtx) audioCtx = new AudioContext();
+            if (soundEnabled && !audioCtx) audioCtx = new AudioContext();
             
             const totalBetCost = baseBet * winMultiplier;
             if (isSpinning || totalBetCost > bankroll || bankroll <= 0) return;
@@ -546,10 +589,9 @@
             bankroll -= totalBetCost;
             
             const winDisplayEl = document.getElementById('win-display');
-            winDisplayEl.innerText = "$0.00";
+            winDisplayEl.innerText = "$0";
             winDisplayEl.classList.remove('win-flash');
             
-            // Remove previous jackpot flashes
             document.querySelectorAll('.pot').forEach(pot => pot.classList.remove('jackpot-win'));
             
             updateDisplay();
@@ -558,7 +600,7 @@
                 b.classList.remove('win-line');
                 const badge = b.querySelector('.payline-badge');
                 if (badge) badge.remove();
-                b.dataset.jackpotType = ""; // Reset jackpot tracking
+                b.dataset.jackpotType = ""; 
             });
             
             const lever = document.getElementById('lever');
@@ -594,7 +636,6 @@
                             const valEl = document.createElement('div');
                             valEl.className = 'coin-value';
                             
-                            // Jackpot Roll Logic
                             const jackpotRoll = Math.random();
                             let cashValue = 0;
                             let label = "";
@@ -638,7 +679,6 @@
             let totalWin = 0;
             let triggeredWin = false;
             
-            // Standard paylines
             for (let row = 0; row < rows; row++) {
                 let matchCount = 1;
                 let firstSymbol = gridData[0][row];
@@ -686,7 +726,6 @@
                 }
             }
 
-            // Coin Scatter & Jackpots
             let coinBoxes = [];
             let coinTotal = 0;
             for (let c = 0; c < cols; c++) {
@@ -709,7 +748,6 @@
                     badge.className = 'payline-badge';
                     
                     if (box.dataset.jackpotType) {
-                        // Flashes the specific Jackpot Pot at the top of the machine
                         document.getElementById(`${box.dataset.jackpotType}-container`).classList.add('jackpot-win');
                         badge.style.background = 'var(--neon-green)';
                         badge.style.color = '#000';
@@ -723,7 +761,6 @@
                 });
             }
 
-            // Process Win
             if (triggeredWin && totalWin > 0) {
                 playWinSound();
                 bankroll += totalWin;
