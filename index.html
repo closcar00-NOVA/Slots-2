@@ -40,6 +40,7 @@
             background: rgba(0, 0, 0, 0.5);
             box-shadow: 0 0 10px var(--neon-red), inset 0 0 10px var(--neon-red);
             border: 1px solid var(--neon-red);
+            transition: box-shadow 0.3s, transform 0.3s;
         }
 
         .pot h2 {
@@ -56,6 +57,18 @@
             color: var(--neon-gold);
             margin-top: 5px;
             text-shadow: 0 0 5px var(--neon-gold);
+            transition: color 0.3s;
+        }
+
+        .pot.jackpot-win {
+            box-shadow: 0 0 30px var(--neon-green), inset 0 0 20px var(--neon-green) !important;
+            border-color: var(--neon-green) !important;
+            transform: scale(1.1);
+        }
+        
+        .pot.jackpot-win h2, .pot.jackpot-win .amount {
+            color: var(--neon-green) !important;
+            text-shadow: 0 0 10px var(--neon-green) !important;
         }
 
         /* Slot Machine & Lever Wrapper */
@@ -113,6 +126,13 @@
             color: var(--neon-gold);
             text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 0 10px var(--neon-gold);
             z-index: 10;
+        }
+        
+        .coin-value.jackpot-text {
+            color: var(--neon-red);
+            font-size: 1.6rem;
+            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 0 15px var(--neon-red);
+            letter-spacing: 1px;
         }
 
         .win-line {
@@ -318,15 +338,15 @@
 <body>
 
     <div class="pots-container">
-        <div class="pot">
+        <div class="pot" id="grand-container">
             <h2>GRAND</h2>
             <div class="amount" id="grand-pot">$5,000.00</div>
         </div>
-        <div class="pot">
+        <div class="pot" id="major-container">
             <h2>MAJOR</h2>
             <div class="amount" id="major-pot">$1,000.00</div>
         </div>
-        <div class="pot">
+        <div class="pot" id="minor-container">
             <h2>MINOR</h2>
             <div class="amount" id="minor-pot">$250.00</div>
         </div>
@@ -384,17 +404,15 @@
             osc.connect(gainNode);
             gainNode.connect(audioCtx.destination);
             
-            osc.type = 'sine'; // Classic retro beep
+            osc.type = 'sine'; 
             
             const now = audioCtx.currentTime;
             
-            // Ascending Vegas Arpeggio (C -> E -> G -> C)
             osc.frequency.setValueAtTime(523.25, now);
             osc.frequency.setValueAtTime(659.25, now + 0.1);
             osc.frequency.setValueAtTime(783.99, now + 0.2);
             osc.frequency.setValueAtTime(1046.50, now + 0.3);
             
-            // Volume Envelope
             gainNode.gain.setValueAtTime(0, now);
             gainNode.gain.linearRampToValueAtTime(0.3, now + 0.05);
             gainNode.gain.setValueAtTime(0.3, now + 0.4);
@@ -471,6 +489,11 @@
             const totalBetCost = baseBet * winMultiplier;
             document.getElementById('bankroll-display').innerText = formatMoney(bankroll);
             document.getElementById('bet-display').innerText = formatMoney(totalBetCost);
+            
+            // Dynamically scale Jackpots based on total bet size
+            document.getElementById('minor-pot').innerText = formatMoney(totalBetCost * 25);
+            document.getElementById('major-pot').innerText = formatMoney(totalBetCost * 100);
+            document.getElementById('grand-pot').innerText = formatMoney(totalBetCost * 500);
         }
 
         function raiseBid() {
@@ -514,7 +537,6 @@
         }
 
         function spin() {
-            // Initialize AudioContext on first user interaction to bypass browser auto-play blocks
             if (!audioCtx) audioCtx = new AudioContext();
             
             const totalBetCost = baseBet * winMultiplier;
@@ -527,13 +549,16 @@
             winDisplayEl.innerText = "$0.00";
             winDisplayEl.classList.remove('win-flash');
             
+            // Remove previous jackpot flashes
+            document.querySelectorAll('.pot').forEach(pot => pot.classList.remove('jackpot-win'));
+            
             updateDisplay();
             
-            // Clean up previous UI overlays
             document.querySelectorAll('.symbol-box').forEach(b => {
                 b.classList.remove('win-line');
                 const badge = b.querySelector('.payline-badge');
                 if (badge) badge.remove();
+                b.dataset.jackpotType = ""; // Reset jackpot tracking
             });
             
             const lever = document.getElementById('lever');
@@ -568,9 +593,33 @@
                         if (randomImg === 'symbol_coin.png.png') {
                             const valEl = document.createElement('div');
                             valEl.className = 'coin-value';
-                            const multi = [0.5, 1, 2, 5, 10][Math.floor(Math.random() * 5)];
-                            const cashValue = (baseBet * winMultiplier) * multi;
-                            valEl.innerText = formatMoney(cashValue);
+                            
+                            // Jackpot Roll Logic
+                            const jackpotRoll = Math.random();
+                            let cashValue = 0;
+                            let label = "";
+
+                            if (jackpotRoll > 0.99) {
+                                label = "GRAND";
+                                cashValue = totalBetCost * 500;
+                            } else if (jackpotRoll > 0.96) {
+                                label = "MAJOR";
+                                cashValue = totalBetCost * 100;
+                            } else if (jackpotRoll > 0.90) {
+                                label = "MINOR";
+                                cashValue = totalBetCost * 25;
+                            } else {
+                                const multi = [0.5, 1, 2, 5, 10][Math.floor(Math.random() * 5)];
+                                cashValue = totalBetCost * multi;
+                                label = formatMoney(cashValue);
+                            }
+
+                            if (label === "GRAND" || label === "MAJOR" || label === "MINOR") {
+                                valEl.classList.add('jackpot-text');
+                                box.dataset.jackpotType = label.toLowerCase();
+                            }
+
+                            valEl.innerText = label;
                             box.dataset.cash = cashValue; 
                             box.appendChild(valEl);
                         } else {
@@ -589,7 +638,7 @@
             let totalWin = 0;
             let triggeredWin = false;
             
-            // Evaluate standard paylines
+            // Standard paylines
             for (let row = 0; row < rows; row++) {
                 let matchCount = 1;
                 let firstSymbol = gridData[0][row];
@@ -623,12 +672,10 @@
                     totalWin += (baseBet * multiplier) * winMultiplier;
                     triggeredWin = true;
                     
-                    // Highlight the streak
                     winningBoxes.forEach(id => {
                         document.getElementById(id).classList.add('win-line');
                     });
 
-                    // Add Badge to the final symbol of the streak
                     const lastBoxId = winningBoxes[winningBoxes.length - 1];
                     const lastBoxEl = document.getElementById(lastBoxId);
                     
@@ -639,7 +686,7 @@
                 }
             }
 
-            // Evaluate Coin Scatter
+            // Coin Scatter & Jackpots
             let coinBoxes = [];
             let coinTotal = 0;
             for (let c = 0; c < cols; c++) {
@@ -660,14 +707,23 @@
                     box.classList.add('win-line');
                     const badge = document.createElement('div');
                     badge.className = 'payline-badge';
-                    badge.style.background = 'var(--neon-gold)';
-                    badge.style.color = '#000';
-                    badge.innerText = `CASH!`;
+                    
+                    if (box.dataset.jackpotType) {
+                        // Flashes the specific Jackpot Pot at the top of the machine
+                        document.getElementById(`${box.dataset.jackpotType}-container`).classList.add('jackpot-win');
+                        badge.style.background = 'var(--neon-green)';
+                        badge.style.color = '#000';
+                        badge.innerText = `${box.dataset.jackpotType.toUpperCase()}!`;
+                    } else {
+                        badge.style.background = 'var(--neon-gold)';
+                        badge.style.color = '#000';
+                        badge.innerText = `CASH!`;
+                    }
                     box.appendChild(badge);
                 });
             }
 
-            // Process Payout & Sound
+            // Process Win
             if (triggeredWin && totalWin > 0) {
                 playWinSound();
                 bankroll += totalWin;
