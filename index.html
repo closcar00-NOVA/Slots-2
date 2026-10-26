@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Asian Fusion Vegas Slots</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --neon-red: #ff003c;
@@ -77,6 +77,7 @@
             display: flex;
             gap: 10px;
             cursor: pointer;
+            position: relative;
         }
 
         .reel {
@@ -117,7 +118,30 @@
         .win-line {
             box-shadow: 0 0 20px 5px var(--neon-gold) inset !important;
             border-color: var(--neon-gold) !important;
+            background-color: rgba(255, 207, 0, 0.2);
             transition: all 0.3s;
+        }
+
+        /* Dynamic Payline Multiplier Badge */
+        .payline-badge {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: var(--neon-red);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 800;
+            z-index: 20;
+            box-shadow: 0 0 10px #000, 0 0 10px var(--neon-red);
+            border: 1px solid #fff;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         /* Lever Assembly */
@@ -346,9 +370,43 @@
     </div>
 
     <script>
+        // Web Audio API Context
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+
+        function playWinSound() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            osc.type = 'sine'; // Classic retro beep
+            
+            const now = audioCtx.currentTime;
+            
+            // Ascending Vegas Arpeggio (C -> E -> G -> C)
+            osc.frequency.setValueAtTime(523.25, now);
+            osc.frequency.setValueAtTime(659.25, now + 0.1);
+            osc.frequency.setValueAtTime(783.99, now + 0.2);
+            osc.frequency.setValueAtTime(1046.50, now + 0.3);
+            
+            // Volume Envelope
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.3, now + 0.05);
+            gainNode.gain.setValueAtTime(0.3, now + 0.4);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+            
+            osc.start(now);
+            osc.stop(now + 1);
+        }
+
         let bankroll = 10000;
         let baseBet = 10;
-        let winMultiplier = 1; // Options: 1, 2, 5
+        let winMultiplier = 1;
         const MAX_BET = 10000;
         const MIN_BET = 10;
         let isSpinning = false;
@@ -449,7 +507,6 @@
 
             btn.innerText = `Multiplier: x${winMultiplier}`;
             
-            // Adjust base bet if multiplier puts total over bankroll
             if (baseBet * winMultiplier > bankroll) {
                 baseBet = Math.max(MIN_BET, Math.floor(bankroll / winMultiplier));
             }
@@ -457,20 +514,27 @@
         }
 
         function spin() {
+            // Initialize AudioContext on first user interaction to bypass browser auto-play blocks
+            if (!audioCtx) audioCtx = new AudioContext();
+            
             const totalBetCost = baseBet * winMultiplier;
             if (isSpinning || totalBetCost > bankroll || bankroll <= 0) return;
             
             isSpinning = true;
             bankroll -= totalBetCost;
             
-            // Reset Last Win display
             const winDisplayEl = document.getElementById('win-display');
             winDisplayEl.innerText = "$0.00";
             winDisplayEl.classList.remove('win-flash');
             
             updateDisplay();
             
-            document.querySelectorAll('.symbol-box').forEach(b => b.classList.remove('win-line'));
+            // Clean up previous UI overlays
+            document.querySelectorAll('.symbol-box').forEach(b => {
+                b.classList.remove('win-line');
+                const badge = b.querySelector('.payline-badge');
+                if (badge) badge.remove();
+            });
             
             const lever = document.getElementById('lever');
             lever.classList.add('pull');
@@ -504,7 +568,6 @@
                         if (randomImg === 'symbol_coin.png.png') {
                             const valEl = document.createElement('div');
                             valEl.className = 'coin-value';
-                            // Coin values scale with total bet
                             const multi = [0.5, 1, 2, 5, 10][Math.floor(Math.random() * 5)];
                             const cashValue = (baseBet * winMultiplier) * multi;
                             valEl.innerText = formatMoney(cashValue);
@@ -524,7 +587,9 @@
 
         function evaluateBoard() {
             let totalWin = 0;
+            let triggeredWin = false;
             
+            // Evaluate standard paylines
             for (let row = 0; row < rows; row++) {
                 let matchCount = 1;
                 let firstSymbol = gridData[0][row];
@@ -554,16 +619,27 @@
                 }
 
                 if (matchCount >= 3 && PAYTABLE[targetSymbol]) {
-                    // Line win base * line multiplier * global win multiplier
                     const multiplier = PAYTABLE[targetSymbol][matchCount];
                     totalWin += (baseBet * multiplier) * winMultiplier;
+                    triggeredWin = true;
                     
+                    // Highlight the streak
                     winningBoxes.forEach(id => {
                         document.getElementById(id).classList.add('win-line');
                     });
+
+                    // Add Badge to the final symbol of the streak
+                    const lastBoxId = winningBoxes[winningBoxes.length - 1];
+                    const lastBoxEl = document.getElementById(lastBoxId);
+                    
+                    const badge = document.createElement('div');
+                    badge.className = 'payline-badge';
+                    badge.innerText = `Line x${multiplier}`;
+                    lastBoxEl.appendChild(badge);
                 }
             }
 
+            // Evaluate Coin Scatter
             let coinBoxes = [];
             let coinTotal = 0;
             for (let c = 0; c < cols; c++) {
@@ -576,21 +652,30 @@
                 }
             }
 
-            // Coin scatter requires 3 or more
             if (coinBoxes.length >= 3) {
                 totalWin += coinTotal;
-                coinBoxes.forEach(box => box.classList.add('win-line'));
+                triggeredWin = true;
+                
+                coinBoxes.forEach(box => {
+                    box.classList.add('win-line');
+                    const badge = document.createElement('div');
+                    badge.className = 'payline-badge';
+                    badge.style.background = 'var(--neon-gold)';
+                    badge.style.color = '#000';
+                    badge.innerText = `CASH!`;
+                    box.appendChild(badge);
+                });
             }
 
-            if (totalWin > 0) {
+            // Process Payout & Sound
+            if (triggeredWin && totalWin > 0) {
+                playWinSound();
                 bankroll += totalWin;
                 
-                // Update Last Win display
                 const winDisplayEl = document.getElementById('win-display');
                 winDisplayEl.innerText = formatMoney(totalWin);
                 winDisplayEl.classList.add('win-flash');
                 
-                // Flash bankroll
                 const bankrollEl = document.getElementById('bankroll-display');
                 bankrollEl.classList.add('win-flash');
                 setTimeout(() => bankrollEl.classList.remove('win-flash'), 1000);
