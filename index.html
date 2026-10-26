@@ -94,7 +94,7 @@
         .machine-wrapper {
             display: flex;
             align-items: center;
-            gap: 15px; /* Grid (780px) + Gap (15px) + Lever (40px) = 835px Total Width */
+            gap: 15px; 
         }
 
         /* Slot Grid */
@@ -232,17 +232,17 @@
             transform: rotateX(70deg) scaleY(0.6);
         }
 
-        /* Controls - Matched width to upper wrapper */
+        /* Controls */
         .controls {
-            width: 835px; /* Exact width of the grid + gap + lever */
+            width: 835px;
             box-sizing: border-box;
             margin-top: 30px;
             display: flex;
-            gap: 10px;
+            gap: 15px;
             align-items: center;
             justify-content: space-between;
             background: rgba(0, 0, 0, 0.8);
-            padding: 15px;
+            padding: 15px 25px;
             border-radius: 12px;
             box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
         }
@@ -251,8 +251,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-width: 90px;
-            padding: 5px 10px;
+            min-width: 120px;
+            padding: 5px 15px;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -260,7 +260,7 @@
 
         .stat-label {
             font-weight: 100;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             color: #aaa;
             letter-spacing: 1px;
             white-space: nowrap;
@@ -268,10 +268,51 @@
 
         .stat-value {
             font-weight: 600;
-            font-size: 1.15rem;
+            font-size: 1.3rem;
             color: #fff;
             transition: color 0.3s;
             white-space: nowrap;
+        }
+
+        /* Bet Adjuster Group */
+        .bet-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .adj-btn {
+            background: transparent;
+            color: #fff;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 800;
+            font-size: 1.5rem;
+            width: 45px;
+            height: 45px;
+            border: 1px solid var(--neon-red);
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--neon-red) inset, 0 0 8px var(--neon-red);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .adj-btn:hover:not(:disabled) {
+            background: rgba(255, 0, 60, 0.2);
+            box-shadow: 0 0 15px var(--neon-red) inset, 0 0 15px var(--neon-red);
+        }
+
+        .adj-btn:active:not(:disabled) {
+            transform: scale(0.9);
+        }
+
+        .adj-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #555;
+            box-shadow: none;
         }
 
         .win-flash {
@@ -285,8 +326,8 @@
             color: #fff;
             font-family: 'Montserrat', sans-serif;
             font-weight: 600;
-            font-size: 0.9rem;
-            padding: 12px 15px;
+            font-size: 1rem;
+            padding: 12px 20px;
             border: 1px solid var(--neon-red);
             border-radius: 6px;
             cursor: pointer;
@@ -338,8 +379,8 @@
         .spin-btn {
             border-color: var(--neon-gold) !important;
             box-shadow: 0 0 10px var(--neon-gold) inset, 0 0 10px var(--neon-gold) !important;
-            font-size: 1.1rem !important;
-            padding: 12px 30px !important;
+            font-size: 1.2rem !important;
+            padding: 12px 40px !important;
         }
 
         .spin-btn:hover:not(:disabled) {
@@ -396,14 +437,15 @@
             <div class="stat-value" id="bankroll-display">$10,000</div>
         </div>
         
-        <div class="stat-box">
-            <div class="stat-label">TOTAL BET</div>
-            <div class="stat-value" id="bet-display">$10.00</div>
+        <div class="bet-group">
+            <button class="adj-btn" id="btn-minus">-</button>
+            <div class="stat-box">
+                <div class="stat-label">TOTAL BET</div>
+                <div class="stat-value" id="bet-display">$10.00</div>
+            </div>
+            <button class="adj-btn" id="btn-plus">+</button>
         </div>
 
-        <button class="control-btn" id="raise-btn" onclick="raiseBid()">Raise Base</button>
-        <button class="control-btn" id="max-bet-btn" onclick="maxBid()">Max Base</button>
-        
         <button class="control-btn multi-btn" id="multiplier-btn" onclick="toggleMultiplier()">Multiplier: x1</button>
 
         <div class="stat-box">
@@ -539,22 +581,59 @@
             document.getElementById('grand-pot').innerText = formatMoney(totalBetCost * 500);
         }
 
-        function raiseBid() {
+        // Hold-to-Adjust Logic
+        let betInterval;
+        let speed = 200; // Start at 200ms tick
+
+        function alterBet(direction) {
             if (isSpinning) return;
-            if (baseBet < 100) baseBet += 10;
-            else if (baseBet < 1000) baseBet += 100;
-            else if (baseBet < MAX_BET) baseBet += 1000;
-            else baseBet = MIN_BET;
+            if (direction === 'up') {
+                if (baseBet < 100) baseBet += 10;
+                else if (baseBet < 1000) baseBet += 100;
+                else if (baseBet < MAX_BET) baseBet += 1000;
+            } else {
+                if (baseBet > 1000) baseBet -= 1000;
+                else if (baseBet > 100) baseBet -= 100;
+                else if (baseBet > MIN_BET) baseBet -= 10;
+            }
             
-            if (baseBet * winMultiplier > bankroll) baseBet = Math.floor(bankroll / winMultiplier);
+            // Cap to bankroll or max
+            if (baseBet * winMultiplier > bankroll) {
+                baseBet = Math.max(MIN_BET, Math.floor(bankroll / winMultiplier));
+            }
             updateDisplay();
         }
 
-        function maxBid() {
-            if (isSpinning) return;
-            baseBet = Math.floor(Math.min(MAX_BET, bankroll / winMultiplier));
-            updateDisplay();
+        function startAdjusting(direction) {
+            alterBet(direction); // Initial tap
+            speed = 200;
+            betInterval = setTimeout(function tick() {
+                alterBet(direction);
+                speed = Math.max(50, speed - 20); // Accelerate
+                betInterval = setTimeout(tick, speed);
+            }, 500); // 500ms delay before repeating starts
         }
+
+        function stopAdjusting() {
+            clearTimeout(betInterval);
+        }
+
+        // Attach listeners for Hold-to-raise
+        const btnPlus = document.getElementById('btn-plus');
+        const btnMinus = document.getElementById('btn-minus');
+
+        btnPlus.addEventListener('mousedown', () => startAdjusting('up'));
+        btnPlus.addEventListener('mouseup', stopAdjusting);
+        btnPlus.addEventListener('mouseleave', stopAdjusting);
+        btnPlus.addEventListener('touchstart', (e) => { e.preventDefault(); startAdjusting('up'); });
+        btnPlus.addEventListener('touchend', stopAdjusting);
+
+        btnMinus.addEventListener('mousedown', () => startAdjusting('down'));
+        btnMinus.addEventListener('mouseup', stopAdjusting);
+        btnMinus.addEventListener('mouseleave', stopAdjusting);
+        btnMinus.addEventListener('touchstart', (e) => { e.preventDefault(); startAdjusting('down'); });
+        btnMinus.addEventListener('touchend', stopAdjusting);
+
 
         function toggleMultiplier() {
             if (isSpinning) return;
