@@ -6,9 +6,9 @@
     <title>Asian Fusion Vegas Slots</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;600;800&display=swap" rel="stylesheet">
     
-    <!-- Firebase SDKs -->
+<!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
 
     <style>
         :root {
@@ -667,24 +667,26 @@
     </div>
 
     <script>
-        // ==========================================
-        // 1. FIREBASE CONFIGURATION
-        // ==========================================
+// ==========================================
+// 1. FIREBASE CONFIGURATION
+// ==========================================
         
-        // PASTE YOUR CONFIG OBJECT HERE
+// PASTE YOUR CONFIG OBJECT HERE
         const firebaseConfig = {
-            apiKey: "AIzaSyCSWZMLtsbybfGo0ZUaH7UhLVHcokgkhcA",
+            apiKey: "YOUR_API_KEY",
             authDomain: "vegas-pro-6256c.firebaseapp.com",
             projectId: "vegas-pro-6256c",
-            storageBucket: "vegas-pro-6256c.firebasestorage.app",
-            messagingSenderId: "943834106696",
-            appId: "1:943834106696:web:24169c1adf1d83a815017d"
+            storageBucket: "vegas-pro-6256c.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const bankrollRef = db.ref('vegas_pro_master_bankroll');
+        const db = firebase.firestore();
+        
+        // Target your exact Firestore document path shown in the screenshot
+        const saveDocRef = db.collection('saves').doc('CHRIS123');
 
         // Game State
         let bankroll = 0; 
@@ -695,22 +697,32 @@
         let isSpinning = false;
         let inBonusMode = false;
 
-        // Sync local bankroll to Firebase
+        // Sync local bankroll to Firebase using .update() so we don't erase the AI bots
         function syncBankroll() {
-            bankrollRef.set(bankroll);
+            saveDocRef.update({
+                bankroll: bankroll
+            }).catch((error) => {
+                console.error("Error syncing to Firestore:", error);
+            });
         }
 
         // Fetch bankroll on load and hide loading screen
-        bankrollRef.on('value', (snapshot) => {
-            const val = snapshot.val();
-            if (val !== null) {
-                bankroll = val;
+        saveDocRef.onSnapshot((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                if (data.bankroll !== undefined) {
+                    bankroll = data.bankroll;
+                }
             } else {
-                bankroll = 10000; // Fallback starting amount if database is empty
-                syncBankroll();
+                bankroll = 10000; // Fallback if document gets deleted
+                saveDocRef.set({ bankroll: bankroll }, { merge: true });
             }
+            
             updateDisplay();
             document.getElementById('loading-screen').style.display = 'none';
+        }, (error) => {
+            console.error("Firestore connection error:", error);
+            document.getElementById('loading-screen').innerText = "CONNECTION ERROR";
         });
 
         // ==========================================
