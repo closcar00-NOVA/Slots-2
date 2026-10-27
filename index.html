@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Asian Fusion Vegas Slots</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
+
     <style>
         :root {
             --neon-red: #ff003c;
@@ -28,6 +33,34 @@
             position: relative;
         }
 
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--bg-dark);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--neon-gold);
+            font-weight: 800;
+            font-size: 2rem;
+            text-shadow: 0 0 20px var(--neon-gold);
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 207, 0, 0.3);
+            border-top-color: var(--neon-gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
         /* Sound Toggle */
         .sound-toggle {
             position: absolute;
@@ -46,7 +79,7 @@
             transition: all 0.3s;
         }
 
-        /* Top Pots - Adjusted for 4 columns matching 835px width */
+        /* Top Pots */
         .pots-container {
             width: 835px;
             display: flex;
@@ -470,7 +503,6 @@
             border-radius: 50%;
             border: 10px solid #222;
             box-shadow: 0 0 40px var(--neon-blue), inset 0 0 40px #000;
-            /* 8 Equal Slices (45deg each) using Conic Gradient */
             background: conic-gradient(
                 #111 0deg 45deg,
                 var(--neon-red) 45deg 90deg,
@@ -478,7 +510,7 @@
                 var(--neon-red) 135deg 180deg,
                 #111 180deg 225deg,
                 var(--neon-red) 225deg 270deg,
-                var(--neon-gold) 270deg 315deg, /* High Tier Slice */
+                var(--neon-gold) 270deg 315deg,
                 var(--neon-red) 315deg 360deg
             );
             position: relative;
@@ -557,6 +589,12 @@
 </head>
 <body>
 
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        CONNECTING TO SERVER...
+    </div>
+
     <button id="sound-toggle" class="sound-toggle" onclick="toggleSound()">🔊 Sound: ON</button>
 
     <!-- Full Screen Bonus Modal -->
@@ -606,7 +644,7 @@
     <div class="controls">
         <div class="stat-box">
             <div class="stat-label">BANKROLL</div>
-            <div class="stat-value" id="bankroll-display">$10,000</div>
+            <div class="stat-value" id="bankroll-display">$0</div>
         </div>
         
         <div class="bet-group">
@@ -629,7 +667,56 @@
     </div>
 
     <script>
-        // Sound Management
+        // ==========================================
+        // 1. FIREBASE CONFIGURATION
+        // ==========================================
+        
+        // PASTE YOUR CONFIG OBJECT HERE
+        const firebaseConfig = {
+            apiKey: "AIzaSyCSWZMLtsbybfGo0ZUaH7UhLVHcokgkhcA",
+            authDomain: "vegas-pro-6256c.firebaseapp.com",
+            projectId: "vegas-pro-6256c",
+            storageBucket: "vegas-pro-6256c.firebasestorage.app",
+            messagingSenderId: "943834106696",
+            appId: "1:943834106696:web:24169c1adf1d83a815017d"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const bankrollRef = db.ref('vegas_pro_master_bankroll');
+
+        // Game State
+        let bankroll = 0; 
+        let baseBet = 10;
+        let winMultiplier = 1;
+        const MAX_BET = 10000;
+        const MIN_BET = 10;
+        let isSpinning = false;
+        let inBonusMode = false;
+
+        // Sync local bankroll to Firebase
+        function syncBankroll() {
+            bankrollRef.set(bankroll);
+        }
+
+        // Fetch bankroll on load and hide loading screen
+        bankrollRef.on('value', (snapshot) => {
+            const val = snapshot.val();
+            if (val !== null) {
+                bankroll = val;
+            } else {
+                bankroll = 10000; // Fallback starting amount if database is empty
+                syncBankroll();
+            }
+            updateDisplay();
+            document.getElementById('loading-screen').style.display = 'none';
+        });
+
+        // ==========================================
+        // 2. AUDIO & GAME LOGIC
+        // ==========================================
+        
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx;
         let soundEnabled = true;
@@ -689,10 +776,10 @@
             osc.type = 'square'; 
             
             const now = audioCtx.currentTime;
-            osc.frequency.setValueAtTime(440, now); // A4
-            osc.frequency.setValueAtTime(554.37, now + 0.15); // C#5
-            osc.frequency.setValueAtTime(659.25, now + 0.3); // E5
-            osc.frequency.setValueAtTime(880, now + 0.45); // A5 (Hold)
+            osc.frequency.setValueAtTime(440, now); 
+            osc.frequency.setValueAtTime(554.37, now + 0.15); 
+            osc.frequency.setValueAtTime(659.25, now + 0.3); 
+            osc.frequency.setValueAtTime(880, now + 0.45); 
             
             gainNode.gain.setValueAtTime(0, now);
             gainNode.gain.linearRampToValueAtTime(0.2, now + 0.1);
@@ -702,19 +789,9 @@
             osc.start(now);
             osc.stop(now + 3);
         }
-
-        // Game State
-        let bankroll = 10000;
-        let baseBet = 10;
-        let winMultiplier = 1;
-        const MAX_BET = 10000;
-        const MIN_BET = 10;
-        let isSpinning = false;
-        let inBonusMode = false;
         
         let gridData = [[], [], [], [], []];
 
-        // Ensure "symbol_bonus.png.png" is loaded to your GitHub
         const SYMBOLS = [
             'symbol_a.png.png',
             'symbol_k.png.png',
@@ -724,7 +801,7 @@
             'symbol_sycee.png.png',
             'symbol_wild.png.png',
             'symbol_coin.png.png',
-            'symbol_bonus.png.png' // New Bonus Scatter
+            'symbol_bonus.png.png' 
         ];
 
         const PAYTABLE = {
@@ -864,6 +941,7 @@
             
             isSpinning = true;
             bankroll -= totalBetCost;
+            syncBankroll(); // Sync after bet deduction
             
             const winDisplayEl = document.getElementById('win-display');
             winDisplayEl.innerText = "$0";
@@ -952,10 +1030,6 @@
             });
         }
 
-        // BONUS WHEEL LOGIC
-        // Multipliers mapped clockwise to the 8 visual slices (Slice 0 is 12:00 to 1:30)
-        // Array matches visual conic-gradient colors:
-        // Slices: 0(Grey), 1(Red), 2(Grey), 3(Red), 4(Grey), 5(Red), 6(Gold/TopPrize), 7(Red)
         const wheelMultipliers = [25, 200, 50, 100, 75, 250, 1000, 500];
 
         function triggerBonusModal(totalBetCost) {
@@ -970,15 +1044,12 @@
             document.getElementById('wheel-win-display').classList.remove('show');
             document.getElementById('wheel-spin-btn').disabled = false;
             
-            // Build Labels matching the slices
-            // Each slice is 45 degrees. Text must be rotated to the center of the slice (+22.5deg)
             wheelMultipliers.forEach((multi, i) => {
                 const label = document.createElement('div');
                 label.className = 'wheel-label';
                 label.style.transform = `rotate(${i * 45 + 22.5}deg)`;
                 label.innerText = formatMoney(totalBetCost * multi);
                 
-                // Color formatting for Gold slot (Slice 6)
                 if (i === 6) {
                     label.style.color = "var(--neon-gold)";
                     label.style.textShadow = "2px 2px 4px #000, 0 0 15px var(--neon-gold)";
@@ -996,7 +1067,6 @@
             const totalBetCost = baseBet * winMultiplier;
             const winningSlice = Math.floor(Math.random() * 8);
             
-            // Mathematics to land exactly in the middle of the chosen slice
             const extraSpins = 6; 
             const targetAngle = 360 - (winningSlice * 45 + 22.5);
             const finalRotation = (360 * extraSpins) + targetAngle;
@@ -1005,10 +1075,10 @@
             wheel.style.transition = 'transform 4.5s cubic-bezier(0.15, 0.9, 0.25, 1)';
             wheel.style.transform = `rotate(${finalRotation}deg)`;
             
-            // Wait for spin to finish
             setTimeout(() => {
                 const wonAmount = totalBetCost * wheelMultipliers[winningSlice];
                 bankroll += wonAmount;
+                syncBankroll(); // Sync after bonus win
                 
                 playBigWinSound();
                 
@@ -1016,15 +1086,12 @@
                 winDisplay.innerText = formatMoney(wonAmount);
                 winDisplay.classList.add('show');
                 
-                // Flash main bankroll
                 const bankrollEl = document.getElementById('bankroll-display');
                 bankrollEl.classList.add('win-flash');
                 setTimeout(() => bankrollEl.classList.remove('win-flash'), 1500);
                 
-                // Update final tracking before closing
                 setTimeout(() => {
                     const winDisplayEl = document.getElementById('win-display');
-                    // Add to any existing line wins from that spin
                     const currentWin = parseFloat(winDisplayEl.innerText.replace(/[^0-9.-]+/g,"")) || 0;
                     winDisplayEl.innerText = formatMoney(currentWin + wonAmount);
                     winDisplayEl.classList.add('win-flash');
@@ -1034,9 +1101,9 @@
                     inBonusMode = false;
                     isSpinning = false;
                     document.getElementById('spin-btn').disabled = false;
-                }, 3500); // Wait 3.5s to read the win before closing
+                }, 3500); 
                 
-            }, 4600); // Just after transition completes
+            }, 4600); 
         }
 
 
@@ -1093,7 +1160,6 @@
                 }
             }
 
-            // Scatter Coins Evaluation
             let coinBoxes = [];
             let coinTotal = 0;
             for (let c = 0; c < cols; c++) {
@@ -1129,7 +1195,6 @@
                 });
             }
 
-            // Scatter Bonus Evaluation
             let bonusBoxes = [];
             for (let c = 0; c < cols; c++) {
                 for (let r = 0; r < rows; r++) {
@@ -1139,10 +1204,10 @@
                 }
             }
 
-            // Process Standard Wins Before Bonus
             if (triggeredWin && totalWin > 0) {
                 playWinSound();
                 bankroll += totalWin;
+                syncBankroll(); // Sync after standard board win
                 
                 const winDisplayEl = document.getElementById('win-display');
                 winDisplayEl.innerText = formatMoney(totalWin);
@@ -1155,7 +1220,6 @@
 
             updateDisplay();
 
-            // Trigger Bonus Modal if 3+ Scatters Hit
             if (bonusBoxes.length >= 3) {
                 bonusBoxes.forEach(box => {
                     box.classList.add('bonus-line');
@@ -1169,13 +1233,11 @@
                 
                 document.getElementById('bonus-status-container').classList.add('jackpot-win');
                 
-                // Wait 1.5s to let the user see the board lines before overlay
                 setTimeout(() => {
                     triggerBonusModal(baseBet * winMultiplier);
                     document.getElementById('bonus-status-container').classList.remove('jackpot-win');
                 }, 1500);
             } else {
-                // If no bonus, end turn normally
                 isSpinning = false;
                 document.getElementById('spin-btn').disabled = false;
             }
