@@ -6,7 +6,7 @@
     <title>Asian Fusion Vegas Slots</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;600;800&display=swap" rel="stylesheet">
     
-<!-- Firebase SDKs -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
 
@@ -518,18 +518,26 @@
             transform: rotate(0deg);
         }
 
+        /* Updated Radial Spoke Layout for Labels */
         .wheel-label {
             position: absolute;
-            width: 100%; 
-            height: 100%;
-            text-align: center;
-            padding-top: 40px;
+            top: 50%; 
+            left: 50%;
+            width: 45%; 
+            height: 40px; 
+            margin-top: -20px; 
+            transform-origin: 0% 50%; 
+            text-align: right; 
+            padding-right: 25px; 
             box-sizing: border-box;
             font-weight: 800;
-            font-size: 1.8rem;
+            font-size: 1.3rem;
             color: #fff;
             text-shadow: 2px 2px 4px #000, -2px -2px 4px #000, 0 0 10px #000;
-            transform-origin: 50% 50%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            white-space: nowrap;
         }
 
         .wheel-spin-btn {
@@ -667,11 +675,11 @@
     </div>
 
     <script>
-// ==========================================
-// 1. FIREBASE CONFIGURATION
-// ==========================================
+        // ==========================================
+        // 1. FIREBASE CONFIGURATION
+        // ==========================================
         
-// PASTE YOUR CONFIG OBJECT HERE
+        // PASTE YOUR CONFIG OBJECT HERE
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY",
             authDomain: "vegas-pro-6256c.firebaseapp.com",
@@ -681,11 +689,9 @@
             appId: "YOUR_APP_ID"
         };
 
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         
-        // Target your exact Firestore document path shown in the screenshot
         const saveDocRef = db.collection('saves').doc('CHRIS123');
 
         // Game State
@@ -697,7 +703,6 @@
         let isSpinning = false;
         let inBonusMode = false;
 
-        // Sync local bankroll to Firebase using .update() so we don't erase the AI bots
         function syncBankroll() {
             saveDocRef.update({
                 bankroll: bankroll
@@ -706,7 +711,6 @@
             });
         }
 
-        // Fetch bankroll on load and hide loading screen
         saveDocRef.onSnapshot((doc) => {
             if (doc.exists) {
                 const data = doc.data();
@@ -714,7 +718,7 @@
                     bankroll = data.bankroll;
                 }
             } else {
-                bankroll = 10000; // Fallback if document gets deleted
+                bankroll = 10000; 
                 saveDocRef.set({ bankroll: bankroll }, { merge: true });
             }
             
@@ -726,7 +730,7 @@
         });
 
         // ==========================================
-        // 2. AUDIO & GAME LOGIC
+        // 2. AUDIO LOGIC
         // ==========================================
         
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -801,20 +805,34 @@
             osc.start(now);
             osc.stop(now + 3);
         }
+
+        // ==========================================
+        // 3. WEIGHTED RNG LOGIC
+        // ==========================================
         
         let gridData = [[], [], [], [], []];
 
-        const SYMBOLS = [
-            'symbol_a.png.png',
-            'symbol_k.png.png',
-            'symbol_q.png.png',
-            'symbol_j.png.png',
-            'symbol_pepper.png.png',
-            'symbol_sycee.png.png',
-            'symbol_wild.png.png',
-            'symbol_coin.png.png',
-            'symbol_bonus.png.png' 
+        const SYMBOL_WEIGHTS = [
+            { id: 'symbol_a.png.png', weight: 40 },
+            { id: 'symbol_k.png.png', weight: 40 },
+            { id: 'symbol_q.png.png', weight: 35 },
+            { id: 'symbol_j.png.png', weight: 35 },
+            { id: 'symbol_pepper.png.png', weight: 20 },
+            { id: 'symbol_sycee.png.png', weight: 15 },
+            { id: 'symbol_wild.png.png', weight: 10 },
+            { id: 'symbol_coin.png.png', weight: 6 },
+            { id: 'symbol_bonus.png.png', weight: 2 } 
         ];
+
+        function getRandomSymbol() {
+            const totalWeight = SYMBOL_WEIGHTS.reduce((sum, sym) => sum + sym.weight, 0);
+            let rand = Math.random() * totalWeight;
+            for (let sym of SYMBOL_WEIGHTS) {
+                if (rand < sym.weight) return sym.id;
+                rand -= sym.weight;
+            }
+            return SYMBOL_WEIGHTS[0].id; 
+        }
 
         const PAYTABLE = {
             'symbol_wild.png.png': { 3: 5, 4: 20, 5: 100 },
@@ -869,7 +887,10 @@
             document.getElementById('grand-pot').innerText = formatMoney(totalBetCost * 500);
         }
 
-        // Hold-to-Adjust Logic
+        // ==========================================
+        // 4. CONTROLS
+        // ==========================================
+
         let betInterval;
         let speed = 200;
 
@@ -953,7 +974,7 @@
             
             isSpinning = true;
             bankroll -= totalBetCost;
-            syncBankroll(); // Sync after bet deduction
+            syncBankroll(); 
             
             const winDisplayEl = document.getElementById('win-display');
             winDisplayEl.innerText = "$0";
@@ -992,7 +1013,8 @@
                     boxes.forEach((box, rowIndex) => {
                         box.classList.remove('spinning');
                         
-                        const randomImg = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+                        // USING NEW WEIGHTED RNG HERE
+                        const randomImg = getRandomSymbol();
                         gridData[colIndex][rowIndex] = randomImg; 
                         
                         const imgEl = box.querySelector('.symbol-img');
@@ -1042,6 +1064,10 @@
             });
         }
 
+        // ==========================================
+        // 5. BONUS WHEEL
+        // ==========================================
+        
         const wheelMultipliers = [25, 200, 50, 100, 75, 250, 1000, 500];
 
         function triggerBonusModal(totalBetCost) {
@@ -1059,7 +1085,9 @@
             wheelMultipliers.forEach((multi, i) => {
                 const label = document.createElement('div');
                 label.className = 'wheel-label';
-                label.style.transform = `rotate(${i * 45 + 22.5}deg)`;
+                
+                // Rotates text outward along the spoke line
+                label.style.transform = `rotate(${i * 45 - 67.5}deg)`;
                 label.innerText = formatMoney(totalBetCost * multi);
                 
                 if (i === 6) {
@@ -1090,7 +1118,7 @@
             setTimeout(() => {
                 const wonAmount = totalBetCost * wheelMultipliers[winningSlice];
                 bankroll += wonAmount;
-                syncBankroll(); // Sync after bonus win
+                syncBankroll(); 
                 
                 playBigWinSound();
                 
@@ -1117,7 +1145,6 @@
                 
             }, 4600); 
         }
-
 
         function evaluateBoard() {
             let totalWin = 0;
@@ -1219,7 +1246,7 @@
             if (triggeredWin && totalWin > 0) {
                 playWinSound();
                 bankroll += totalWin;
-                syncBankroll(); // Sync after standard board win
+                syncBankroll(); 
                 
                 const winDisplayEl = document.getElementById('win-display');
                 winDisplayEl.innerText = formatMoney(totalWin);
